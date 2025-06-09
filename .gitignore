@@ -1,0 +1,25 @@
+# === Sensitive files ===
+credentials.json
+token.json
+src/config.json
+
+# === Python bytecode and cache ===
+__pycache__/
+*.py[cod]
+
+# === Virtual environment ===
+venv/
+.env/
+.envrc/
+
+# === OS & Editor specific ===
+.DS_Store          # macOS
+Thumbs.db          # Windows
+*.swp              # Vim swap files
+
+# === VS Code & IDEs ===
+.vscode/
+.idea/
+
+# === Logs or temporary files ===
+*.log
