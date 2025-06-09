@@ -90,10 +90,10 @@ To run in the background:
 
 You can modify these parameters in main.py:
 
-- How often to check for new emails (seconds)
+- How often to check for new emails (seconds): 
 CHECK_INTERVAL = 300  # 5 minutes
 
-- Meeting keywords to look for in email subjects
+- Meeting keywords to look for in email subjects: 
 MEETING_KEYWORDS = ['invitation', 'meeting', 'event']
 
 ---
