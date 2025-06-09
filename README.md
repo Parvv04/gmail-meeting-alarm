@@ -24,15 +24,15 @@ Automatically sends notification for your upcoming meetings by scanning your Gma
 # Installation 🚀
 
 Clone the repository:
-~~~
 bash
+~~~
 git clone https://github.com/Parvv04/gmail-meeting-alarm.git
 cd gmail-meeting-alarm
 ~~~
 
 Install required packages:
-~~~
 bash
+~~~
 pip install -r requirements.txt
 ~~~
 
