@@ -2,7 +2,12 @@ import time
 import json
 from googleapiclient.discovery import build
 from auth import authenticate
-from mail_processor import decode_body, contains_meeting, send_notification
+from mail_processor import (
+    decode_body, 
+    contains_meeting, 
+    send_notification,
+    extract_meeting_details
+)
 
 # Load configuration
 with open('src/config.json') as config_file:
@@ -28,7 +33,8 @@ def monitor_emails():
                 
                 msg_data = service.users().messages().get(
                     userId='me',
-                    id=msg['id']
+                    id=msg['id'],
+                    format='full'
                 ).execute()
                 
                 sender = next(h['value'] for h in msg_data['payload']['headers'] 
@@ -36,7 +42,13 @@ def monitor_emails():
                 body = decode_body(msg_data['payload'])
                 
                 if contains_meeting(body, config['meeting_keywords']):
-                    send_notification(sender)
+                    details = extract_meeting_details(body)
+                    send_notification(
+                        sender=sender,
+                        meeting_title=details['title'],
+                        start_time=details['time'],
+                        meeting_link=details['link']
+                    )
                 
                 processed_ids.add(msg['id'])
             
