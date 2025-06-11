@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MailMinder</title>
+    <link rel="stylesheet" href="app.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📧 MailMinder</h1>
+            <p>Intelligent meeting detection and notification system</p>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalMeetings">0</div>
+                <div class="stat-label">Total Meetings</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="upcomingMeetings">0</div>
+                <div class="stat-label">Upcoming</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="emailsScanned">0</div>
+                <div class="stat-label">Emails Scanned</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="successRate">0%</div>
+                <div class="stat-label">Detection Rate</div>
+            </div>
+        </div>
+        <div class="main-grid">
+            <div class="card">
+                <h2>
+                    <span class="status-indicator" id="systemStatus"></span>
+                    System Control
+                </h2>
+                <div class="form-group">
+                    <label for="checkInterval">Check Interval (minutes)</label>
+                    <select id="checkInterval">
+                        <option value="1">1 minute</option>
+                        <option value="5" selected>5 minutes</option>
+                        <option value="10">10 minutes</option>
+                        <option value="30">30 minutes</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="alertTime">Alert Before Meeting (minutes)</label>
+                    <select id="alertTime">
+                        <option value="5">5 minutes</option>
+                        <option value="10" selected>10 minutes</option>
+                        <option value="15">15 minutes</option>
+                        <option value="30">30 minutes</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="emailKeywords">Meeting Keywords (comma-separated)</label>
+                    <textarea id="emailKeywords" rows="3" placeholder="meeting, zoom, conference, appointment, masterclass, workshop">meeting, zoom, conference, appointment, masterclass, workshop</textarea>
+                </div>
+                <div class="settings-group">
+                    <label for="allowedMailIds">Allowed Mail IDs (comma-separated):</label>
+                    <input type="text" id="allowedMailIds" placeholder="e.g. alice@example.com, bob@company.com" style="width:100%" />
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button class="btn" id="startBtn" onclick="toggleSystem()">
+                        <span>▶️</span> Start Monitoring
+                    </button>
+                    <button class="btn btn-danger" onclick="clearLogs()">
+                        <span>🗑️</span> Clear Logs
+                    </button>
+                </div>
+            </div>
+            <div class="card">
+                <h2>📊 Recent Activity</h2>
+                <div class="logs-container" id="logsContainer">
+                    <div class="log-entry info">[INFO] Gmail Meeting Alarm initialized</div>
+                    <div class="log-entry debug">[DEBUG] Waiting for system start...</div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>📅 Detected Meetings</h2>
+            <div id="meetingsContainer">
+                <p style="text-align: center; color: #a0aec0; padding: 20px;">
+                    No meetings detected yet. Start the system to begin scanning your emails.
+                </p>
+            </div>
+        </div>
+    </div>
+    <!-- Notification Template -->
+    <div class="notification" id="notification">
+        <div class="notification-header">
+            <div class="notification-title">Meeting Alert</div>
+            <button class="notification-close" onclick="hideNotification()">×</button>
+        </div>
+        <div id="notificationContent"></div>
+        <div style="margin-top: 15px; text-align: right;">
+            <button class="btn" onclick="joinMeeting()" id="joinBtn" style="display: none;">Join Meeting</button>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -17,14 +17,14 @@ ner_model = pipeline("ner", model="dslim/bert-base-NER", aggregation_strategy="s
 # Define timezone mappings to resolve ambiguity
 TIMEZONE_MAP = {
     'IST': pytz.timezone('Asia/Kolkata'),  # India Standard Time
-    'EST': pytz.timezone('US/Eastern'),
-    'PST': pytz.timezone('US/Pacific'), 
-    'CST': pytz.timezone('US/Central'),
+    'EST': pytz.timezone('America/New_York'),  # US Eastern Time
+    'PST': pytz.timezone('America/Los_Angeles'),  # US Pacific Time
+    'CST': pytz.timezone('America/Chicago'),  # Central Time
     'UTC': pytz.UTC,
     'GMT': pytz.UTC,
-    'EDT': pytz.timezone('US/Eastern'),
-    'PDT': pytz.timezone('US/Pacific'),
-    'CDT': pytz.timezone('US/Central')
+    'EDT': pytz.timezone('America/New_York'),
+    'PDT': pytz.timezone('America/Los_Angeles'),
+    'CDT': pytz.timezone('America/Chicago')  # Central Daylight Time
 }
 
 def extract_meeting_details_ai(email_body):
@@ -235,8 +235,10 @@ def extract_meeting_details(email_body):
 
     # 3. Enhanced patterns for date/time extraction
     patterns_to_try = [
-        # Pattern 1: "May 20th" or "May 20, 2024" format
-        r'(?:on\s+)?(?:May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s*(?:(\d{4}))?\s*(?:at\s+)?(\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)?)?',
+        # Pattern 0: "this Thursday, 12th June 2025 from 3:00 pm"
+        r'(?:this|next)?\s*(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(\d{1,2})(?:st|nd|rd|th)?\s+(Jan|Feb|Mar|Apr|May|Jun|July|August|September|October|November|December)[a-z]*\s*(\d{4})?\s*(?:from|at)?\s*(\d{1,2}:\d{2}|\d{1,2})\s*(AM|PM|am|pm)?',
+        # Pattern 1: "May 20th" or "May 20, 2024" format, now stricter for time
+        r'(?:on\s+)?(?:May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s*(?:(\d{4}))?\s*(?:at|time[:]?|from)?\s*(\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm))?',
         
         # Pattern 2: "on [date] at [time]"
         r'(?:on\s+)?(\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*(?:\d{4})?)\s*(?:at|@)\s*(\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)?)',
@@ -257,8 +259,12 @@ def extract_meeting_details(email_body):
             try:
                 groups = match.groups()
                 print(f"[DEBUG] Pattern {i+1} matched: {groups}")
-                
-                if i == 0:  # May 20th format
+                if i == 0:  # Our new pattern
+                    weekday, day, month, year, time_part, ampm = groups
+                    year = year if year else str(datetime.now().year)
+                    time_str = f"{time_part} {ampm}".strip() if ampm else time_part
+                    datetime_str = f"{month} {day}, {year} {time_str}"
+                elif i == 1:  # May 20th format
                     day = groups[0]
                     year = groups[1] if groups[1] else str(datetime.now().year)
                     time_part = groups[2] if groups[2] else "09:00 AM"
@@ -347,12 +353,9 @@ def extract_meeting_title(email_body):
     return "Scheduled Meeting"
 
 def send_notification(sender, meeting_title, start_time, meeting_link=None):
-    """Show platform-appropriate meeting notification"""
-    # Format time and date
+    """Show a desktop notification on Linux (tkinter), MacOS (osascript), or Windows (ctypes)."""
     time_str = start_time.strftime("%I:%M %p") if start_time else "Time not specified"
     date_str = start_time.strftime("%A, %d %B %Y") if start_time else "Date not specified"
-    
-    # Detect platform from link
     platform_name = "Unknown Platform"
     if meeting_link:
         if "zoom.us" in meeting_link.lower():
@@ -363,16 +366,9 @@ def send_notification(sender, meeting_title, start_time, meeting_link=None):
             platform_name = "Google Meet"
         elif "webex.com" in meeting_link.lower():
             platform_name = "Webex"
-    
-    # Build message
-    message = f"""📢 {meeting_title}
-👤 From: {sender}
-⏰ Time: {time_str}
-📅 Date: {date_str}
-🌐 Platform: {platform_name}"""
-    
-    # Platform-specific notifications
-    if platform.system() == 'Windows':
+    message = f"📢 {meeting_title}\n👤 From: {sender}\n⏰ Time: {time_str}\n📅 Date: {date_str}\n🌐 Platform: {platform_name}"
+    sys_platform = platform.system()
+    if sys_platform == 'Windows':
         # Windows native alert
         response = ctypes.windll.user32.MessageBoxW(
             0,
@@ -382,19 +378,14 @@ def send_notification(sender, meeting_title, start_time, meeting_link=None):
         )
         if response == 1 and meeting_link:  # IDOK = 1
             webbrowser.open(meeting_link)
-    
-    elif platform.system() == 'Darwin':  # MacOS
-        os.system(f"""
-        osascript -e 'display notification "{message}" with title "MEETING ALERT"'
-        """)
+    elif sys_platform == 'Darwin':  # MacOS
+        os.system(f'osascript -e \'display notification "{message}" with title "MEETING ALERT"\'')
         if meeting_link:
             webbrowser.open(meeting_link)
-    
-    else:  # Linux/other - use tkinter fallback
+    else:  # Linux/other - use tkinter popup
         root = tk.Tk()
         root.withdraw()
         root.attributes('-topmost', True)
-        
         if meeting_link:
             response = messagebox.askyesno(
                 "MEETING ALERT",

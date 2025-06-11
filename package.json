@@ -1,0 +1,9 @@
+{
+  "main": "electron-main.js",
+  "devDependencies": {
+    "electron": "^36.4.0"
+  },
+  "scripts": {
+    "electron": "electron electron-main.js"
+  }
+}
