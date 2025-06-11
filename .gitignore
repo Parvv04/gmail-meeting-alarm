@@ -23,3 +23,5 @@ Thumbs.db          # Windows
 
 # === Logs or temporary files ===
 *.log
+
+node_modules/
