@@ -9,14 +9,20 @@ Automatically sends notification for your upcoming meetings by scanning your Gma
 - 🔔 Automatic meeting detection from Gmail notifications
 - 🔒 Secure OAuth 2.0 authentication
 - 🧩 Easy setup with Google API
-- 💻 Cross-platform support (Windows, macOS, Linux)
+- 💻 Cross-platform desktop app (Windows, macOS, Linux) using Electron + FastAPI
+- 📨 Sender filtering (allows only mail IDs that have been input)
+- 🖥️ Desktop notifications (native)
+- 🕑 Customizable scan and alert intervals
+- ✅ Click detected meetings to open the original email in Gmail (opens in your default browser)
 
 ---
 
 # Prerequisites 📋
 
 - Python 3.8+
-- Google account 
+- Node.js & npm (for Electron)
+- Google account
+- At least one web browser installed (required for opening Gmail links)
 - Active internet connection
 
 ---
@@ -29,9 +35,14 @@ git clone https://github.com/Parvv04/gmail-meeting-alarm.git
 cd gmail-meeting-alarm
 ~~~
 
-Install required packages:
+Install required Python packages:
 ~~~
 pip install -r requirements.txt
+~~~
+
+Install Electron dependencies:
+~~~
+npm install
 ~~~
 
 Google API Setup 🔑
@@ -53,62 +64,64 @@ Google API Setup 🔑
      - Place it in the project directory
 
 First-Time Authentication 🔓
-- Run the application:
+- Start the backend:
 ~~~
-bash
-python main.py
+python3 src/main.py
 ~~~
-
-On first run:
-- A browser window will open asking you to log in to your Google account
-- Grant permission for the app to access your Gmail and Calendar
-- After authentication, a token.json file will be created in the project directory
+- On first run, a browser window will open for Google login and permissions.
+- After authentication, a token.json file will be created in the project directory.
 
 ---
 
 # Usage 🖥️
 
-Simply run the application:
+1. **Start the backend (FastAPI):**
 ~~~
-bash
-python main.py
+python3 src/main.py
 ~~~
+2. **Start the Electron desktop app:**
+~~~
+npm run electron
+~~~
+3. Use the UI to:
+   - Start/stop monitoring
+   - Set allowed mail IDs, scan interval, and alert time
+   - View detected meetings and logs
+   - Click "View Email" to open the original Gmail message in your browser
+   - Click "Join Meeting" to open the meeting link
 
-The application will:
-- Continuously monitor your Gmail for new invitations
-- Show desktop notifications
-- Run silently in the background
-
-To run in the background:
-- Windows: Create a shortcut in Startup folder
-- macOS: Use launchd
-- Linux: Add to startup applications
+**Note:**
+- You must have a web browser installed for "View Email" to work. Electron will use your system's default browser.
+- On Linux, ensure `xdg-utils` is installed (usually by default) and at least one browser (e.g., Firefox, Chromium).
 
 ---
 
 # Configuration ⚙️
 
-You can modify these parameters in main.py:
-
-- How often to check for new emails (seconds): 
-CHECK_INTERVAL = 300  # 5 minutes
-
-- Meeting keywords to look for in email subjects: 
-MEETING_KEYWORDS = ['invitation', 'meeting', 'event']
+You can modify these parameters in the UI or in `src/config.json`:
+- Allowed sender email addresses
+- Scan interval (minutes)
+- Alert before meeting (minutes)
+- Meeting keywords
 
 ---
 
-# No notifications:
+# Troubleshooting
 
-Check your system's notification settings
-
-Ensure emails contain the keywords mentioned in the main.py
+- **No notifications?**
+  - Check your system's notification settings.
+  - Ensure emails contain the keywords set in the UI.
+- **Links not opening?**
+  - Make sure you have a browser installed and set as default.
+  - On Linux, install `xdg-utils` and a browser (e.g., `sudo apt install firefox`).
+- **Backend not reachable?**
+  - Make sure `python3 src/main.py` is running and accessible at `http://127.0.0.1:8000`.
 
 ---
 
 # Security 🔒
 - Your credentials are stored locally and never transmitted
-- The app only requests minimum required permissions (read-only for Gmail, read-only for Calendar)
+- The app only requests minimum required permissions (read-only for Gmail)
 - You can revoke access anytime at Google Account Security
 
 ---

@@ -27,6 +27,12 @@ ipcMain.handle('show-notification', (event, { title, body }) => {
   new Notification({ title, body }).show();
 });
 
+// Listen for open-external requests from renderer
+ipcMain.handle('open-external', (event, url) => {
+  shell.openExternal(url);
+});
+
+
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {

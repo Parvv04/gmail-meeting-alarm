@@ -4,6 +4,7 @@
 // Application State
 let isSystemRunning = false;
 let checkIntervalId = null;
+let uiPollIntervalId = null;
 let detectedMeetings = [];
 let allowedMailIds = [];
 let stats = {
@@ -38,7 +39,11 @@ async function startSystem() {
     document.getElementById('startBtn').innerHTML = '<span>⏸️</span> Stop Monitoring';
     document.getElementById('startBtn').classList.add('btn-danger');
     document.getElementById('systemStatus').classList.add('active');
+    // Backend scan interval
     checkIntervalId = setInterval(checkEmails, interval);
+    // UI poll interval (every 15s)
+    if (uiPollIntervalId) clearInterval(uiPollIntervalId);
+    uiPollIntervalId = setInterval(checkEmails, 15000);
     addLog('success', `System started - checking every ${interval/60000} minutes`);
     setTimeout(checkEmails, 2000);
     saveSettings();
@@ -56,6 +61,10 @@ async function stopSystem() {
     if (checkIntervalId) {
         clearInterval(checkIntervalId);
         checkIntervalId = null;
+    }
+    if (uiPollIntervalId) {
+        clearInterval(uiPollIntervalId);
+        uiPollIntervalId = null;
     }
     document.getElementById('startBtn').innerHTML = '<span>▶️</span> Start Monitoring';
     document.getElementById('startBtn').classList.remove('btn-danger');
@@ -116,6 +125,21 @@ function joinMeeting() {
     }
 }
 
+function openGmailMessage(messageId) {
+    if (!messageId) return;
+    const url = `https://mail.google.com/mail/u/0/#inbox/${messageId}`;
+    addLog('debug', 'Attempting to open Gmail message: ' + url);
+    if (window.electronAPI && typeof window.electronAPI.openExternal === 'function') {
+        window.electronAPI.openExternal(url).then(() => {
+            addLog('info', 'Gmail message opened via Electron shell.');
+        }).catch((err) => {
+            addLog('error', 'Electron shell.openExternal failed: ' + err);
+        });
+    } else {
+        addLog('error', 'Electron shell.openExternal is not available. Cannot open Gmail message.');
+    }
+}
+
 function updateMeetingsDisplay() {
     const container = document.getElementById('meetingsContainer');
     if (detectedMeetings.length === 0) {
@@ -166,13 +190,18 @@ function updateMeetingsDisplay() {
                         ${isUpcoming ? 'Upcoming' : 'Past'}
                     </div>
                 </div>
-                ${meeting.link ? `
-                    <div style="margin-top: 10px;">
+                <div style="margin-top: 10px; display: flex; gap: 10px;">
+                    ${meeting.link ? `
                         <button class="btn" onclick="window.open('${meeting.link}', '_blank')" style="font-size: 14px; padding: 8px 15px;">
                             Join Meeting
                         </button>
-                    </div>
-                ` : ''}
+                    ` : ''}
+                    ${meeting.id ? `
+                        <button class="btn btn-success" onclick="openGmailMessage('${meeting.id}')" style="font-size: 14px; padding: 8px 15px;">
+                            View Email
+                        </button>
+                    ` : ''}
+                </div>
             </div>
         `;
     }).join('');
