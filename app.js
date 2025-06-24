@@ -7,6 +7,7 @@ let checkIntervalId = null;
 let uiPollIntervalId = null;
 let detectedMeetings = [];
 let allowedMailIds = [];
+let accounts = [];
 let stats = {
     totalMeetings: 0,
     upcomingMeetings: 0,
@@ -19,6 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadSettings();
     updateStats();
     addLog('info', 'Application loaded successfully');
+    renderAccounts();
 });
 
 function toggleSystem() {
@@ -183,6 +185,9 @@ function updateMeetingsDisplay() {
                         <span>👤</span> ${meeting.sender || 'Unknown'}
                     </div>
                     <div class="meeting-detail">
+                        <span>📧</span> <b>${meeting.account || 'Unknown account'}</b>
+                    </div>
+                    <div class="meeting-detail">
                         <span>🌐</span> ${meeting.platform || 'Unknown'}
                     </div>
                     <div class="meeting-detail">
@@ -206,6 +211,27 @@ function updateMeetingsDisplay() {
         `;
     }).join('');
 }
+
+// Account filter dropdown logic
+function populateAccountFilter(accounts) {
+    const filter = document.getElementById('accountFilter');
+    filter.innerHTML = '<option value="all">All Accounts</option>';
+    accounts.forEach(acc => {
+        const opt = document.createElement('option');
+        opt.value = acc;
+        opt.textContent = acc;
+        filter.appendChild(opt);
+    });
+}
+
+function getSelectedAccountFilter() {
+    const filter = document.getElementById('accountFilter');
+    return filter.value;
+}
+
+document.getElementById('accountFilter').addEventListener('change', () => {
+    renderMeetings();
+});
 
 async function updateStats() {
     try {
@@ -344,3 +370,126 @@ async function checkEmails() {
         addLog('error', 'Failed to check emails: ' + e.message);
     }
 }
+
+function renderAccounts() {
+    const container = document.getElementById('accountsContainer');
+    if (!container) return;
+    if (accounts.length === 0) {
+        container.innerHTML = '<p style="color:#a0aec0;">No accounts added. Add a Gmail address to start monitoring.</p>';
+        return;
+    }
+    container.innerHTML = accounts.map(email => `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+            <span style="flex:1;">📧 ${email}</span>
+            <button class="btn btn-danger" style="padding:4px 10px;font-size:13px;" onclick="removeAccount('${email}')">Remove</button>
+        </div>
+    `).join('');
+}
+
+// Meetings rendering logic
+function renderMeetings() {
+    const container = document.getElementById('meetingsContainer');
+    if (!window.meetings || window.meetings.length === 0) {
+        container.innerHTML = `<p style="text-align: center; color: #a0aec0; padding: 20px;">No meetings detected yet. Start the system to begin scanning your emails.</p>`;
+        return;
+    }
+    const selectedAccount = getSelectedAccountFilter();
+    let filteredMeetings = window.meetings;
+    if (selectedAccount && selectedAccount !== 'all') {
+        filteredMeetings = window.meetings.filter(m => m.account === selectedAccount);
+    }
+    if (filteredMeetings.length === 0) {
+        container.innerHTML = `<p style="text-align: center; color: #a0aec0; padding: 20px;">No meetings found for this account.</p>`;
+        return;
+    }
+    container.innerHTML = filteredMeetings.map(meeting => renderMeetingCard(meeting)).join('');
+}
+
+async function addAccount() {
+    const input = document.getElementById('addAccountEmail');
+    const email = input.value.trim().toLowerCase();
+    if (!email || !/^[^@\s]+@gmail\.com$/.test(email)) {
+        addLog('error', 'Please enter a valid Gmail address.');
+        return;
+    }
+    if (accounts.includes(email)) {
+        addLog('warning', 'Account already added.');
+        return;
+    }
+    // Trigger backend auth flow for this account
+    try {
+        const resp = await fetch('http://127.0.0.1:8000/api/add-account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        if (resp.ok) {
+            // Wait for backend to finish authentication and monitoring
+            const result = await resp.json();
+            if (result.success) {
+                accounts.push(email);
+                input.value = '';
+                addLog('success', `Account added and authenticated: ${email}`);
+                renderAccounts();
+                populateAccountFilter(accounts);
+                // Optionally, refresh meetings for new account
+                checkEmails();
+            } else {
+                addLog('error', 'Failed to authenticate account: ' + (result.error || 'Unknown error'));
+            }
+        } else {
+            const err = await resp.text();
+            addLog('error', 'Failed to add account: ' + err);
+        }
+    } catch (e) {
+        addLog('error', 'Failed to add account: ' + e.message);
+    }
+}
+
+async function removeAccount(email) {
+    try {
+        const resp = await fetch('http://127.0.0.1:8000/api/remove-account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        if (resp.ok) {
+            const result = await resp.json();
+            if (result.success) {
+                accounts = accounts.filter(acc => acc !== email);
+                addLog('info', `Account removed: ${email}`);
+                renderAccounts();
+                populateAccountFilter(accounts);
+                // Optionally, refresh meetings after removal
+                checkEmails();
+            } else {
+                addLog('error', 'Failed to remove account: ' + (result.error || 'Unknown error'));
+            }
+        } else {
+            const err = await resp.text();
+            addLog('error', 'Failed to remove account: ' + err);
+        }
+    } catch (e) {
+        addLog('error', 'Failed to remove account: ' + e.message);
+    }
+}
+
+function fetchAccounts() {
+    fetch('http://127.0.0.1:8000/api/accounts')
+        .then(res => res.json())
+        .then(data => {
+            accounts = data.accounts || [];
+            renderAccounts();
+            populateAccountFilter(accounts);
+        })
+        .catch(() => {
+            accounts = [];
+            renderAccounts();
+            populateAccountFilter(accounts);
+        });
+}
+
+// On load, fetch accounts from backend
+window.addEventListener('DOMContentLoaded', () => {
+    fetchAccounts();
+});

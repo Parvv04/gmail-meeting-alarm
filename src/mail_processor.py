@@ -11,7 +11,7 @@ import webbrowser
 from transformers import pipeline
 import pytz 
 
-# Load a local NLP model (runs offline)
+# Load a local NLP model
 ner_model = pipeline("ner", model="dslim/bert-base-NER", aggregation_strategy="simple")
 
 # Define timezone mappings to resolve ambiguity

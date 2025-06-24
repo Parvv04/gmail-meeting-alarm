@@ -1,11 +1,12 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Body
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import threading
 import time
-from src.auth import authenticate
+import os
+from src.auth import authenticate, get_token_files
 from src.mail_processor import decode_body, contains_meeting, extract_meeting_details
 
 app = FastAPI()
@@ -50,6 +51,9 @@ class Settings(BaseModel):
     emailKeywords: str
     isSystemRunning: Optional[bool] = False
 
+class AccountRequest(BaseModel):
+    email: str
+
 @app.get("/api/meetings")
 def get_meetings():
     return meetings
@@ -70,11 +74,16 @@ def get_stats():
 @app.post("/api/start")
 def start_monitoring():
     global is_running, monitor_thread
+    from src.auth import get_token_files
     if not is_running:
         is_running = True
-        if not monitor_thread or not monitor_thread.is_alive():
-            monitor_thread = threading.Thread(target=monitor_emails, daemon=True)
-            monitor_thread.start()
+        token_files = get_token_files()
+        if not token_files:
+            # Fallback to single token.json for backward compatibility
+            token_files = [os.path.join(os.path.dirname(__file__), '../token.json')]
+        for token_path in token_files:
+            t = threading.Thread(target=monitor_emails_for_token, args=(token_path,), daemon=True)
+            t.start()
     return {"status": "started"}
 
 @app.post("/api/stop")
@@ -87,6 +96,50 @@ def stop_monitoring():
 def api_check_emails():
     # Return meetings as the frontend expects
     return meetings
+
+@app.post("/api/add-account")
+def add_account(req: AccountRequest):
+    email = req.email.strip().lower()
+    # Start OAuth flow for this email, save token as token-<email>.json
+    try:
+        token_path = os.path.join(os.path.dirname(__file__), f"../token-{email}.json")
+        if os.path.exists(token_path):
+            return {"success": True, "message": "Account already authenticated."}
+        # This should trigger the OAuth flow and save the token file
+        creds = authenticate(token_path, email=email)
+        if creds:
+            # Start monitoring thread for this account
+            t = threading.Thread(target=monitor_emails_for_token, args=(token_path,), daemon=True)
+            t.start()
+            return {"success": True}
+        else:
+            return {"success": False, "error": "Authentication failed."}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/remove-account")
+def remove_account(req: AccountRequest):
+    email = req.email.strip().lower()
+    token_path = os.path.join(os.path.dirname(__file__), f"../token-{email}.json")
+    try:
+        if os.path.exists(token_path):
+            os.remove(token_path)
+        # Optionally, stop monitoring thread for this account (if tracked)
+        return {"success": True}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/api/accounts")
+def get_accounts():
+    token_files = get_token_files()
+    accounts = []
+    for path in token_files:
+        if path.endswith(".json"):
+            name = os.path.basename(path)
+            if name.startswith("token-") and name.endswith(".json"):
+                email = name[len("token-"):-len(".json")]
+                accounts.append(email)
+    return {"accounts": accounts}
 
 def parse_time(dt_str):
     from dateutil.parser import parse
@@ -104,14 +157,15 @@ def time_now():
     from datetime import datetime
     return datetime.now()
 
-def monitor_emails():
-    global is_running, meetings, stats
-    creds = authenticate()
+def monitor_emails_for_token(token_path):
+    from src.auth import authenticate
+    creds = authenticate(token_path)
     from googleapiclient.discovery import build
     service = build('gmail', 'v1', credentials=creds)
-    # Print the authenticated email address
+    # Get the authenticated email address for this token
     profile = service.users().getProfile(userId='me').execute()
-    print(f"[DEBUG] Authenticated as: {profile.get('emailAddress')}")
+    account_email = profile.get('emailAddress')
+    print(f"[DEBUG] Monitoring for account: {account_email}")
     processed_ids = set()
     # Use allowedMailIds from settings, fallback to config.json if empty
     allowed_mail_ids = [s.strip().lower() for s in settings.get("allowedMailIds", "").split(",") if s.strip()]
@@ -158,8 +212,9 @@ def monitor_emails():
                         "title": details['title'],
                         "time": details['time'].isoformat() if details['time'] else None,
                         "sender": sender,
-                        "platform": "Unknown",  # Could be improved
-                        "link": details['link']
+                        "platform": "Unknown",
+                        "link": details['link'],
+                        "account": account_email
                     }
                     meetings.append(meeting_obj)
                     stats["totalMeetings"] += 1
