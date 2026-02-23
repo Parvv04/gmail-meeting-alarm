@@ -1,33 +1,72 @@
 # Gmail Meeting Alarm
 
-Automatically sends notification for your upcoming meetings by scanning your Gmail notifications. Never miss an important meeting again!
+AI-powered desktop application that scans Gmail inbox in real-time, extracts meeting details using NLP + regex parsing, and triggers native desktop alerts so you never miss a meeting.
 
 ---
 
-# Features ✨
+## Why I Built This
 
-- 🔔 Automatic meeting detection from Gmail notifications
-- 🔒 Secure OAuth 2.0 authentication
-- 🧩 Easy setup with Google API
-- 💻 Cross-platform desktop app (Windows, macOS, Linux) using Electron + FastAPI
-- 📨 Sender filtering (allows only mail IDs that have been input)
-- 🖥️ Desktop notifications (native)
-- 🕑 Customizable scan and alert intervals
-- ✅ Click detected meetings to open the original email in Gmail (opens in your default browser)
+I wanted a system that automatically detects meeting details from emails instead of manually checking Gmail.
+This project helped me learn:
 
----
+- Gmail API integration
 
-# Prerequisites 📋
+- OAuth 2.0 authentication flow
 
-- Python 3.8+
-- Node.js & npm (for Electron)
-- Google account
-- At least one web browser installed (required for opening Gmail links)
-- Active internet connection
+- Backend–Frontend communication (FastAPI + Electron)
+
+- NLP + regex-based data extraction
+
+- Desktop notification systems
 
 ---
 
-# Installation 🚀
+## Architecture
+
+```mermaid
+flowchart TD
+        A[Electron - Frontend UI] --> B[FastAPI - Backend Server];
+        B --> C[Gmail API - OAuth 2.0 secured];
+        C --> D[Email Parsing Engine - Regex + NLP];
+        D --> E[Notification Trigger System];
+```
+
+## Tech Stack
+- Frontend
+  - Electron
+  - HTML/CSS
+  - JavaScript
+- Backend
+  - Python
+  - FastAPI
+  - Gmail API
+  - OAuth 2.0
+- Processing
+  - Regex based time/date extraction
+  - Meeting link detection
+  - Sender filtering logic
+ 
+
+# Features 
+
+- OAuth-secured Gmail integration
+- Intelligent meeting detection
+- Sender whitelisting
+- Configurable scan intervals
+- Native OS notifications
+- One-click email + meeting link access
+
+---
+
+## Key Technical Challenges Solved
+- Implemented OAuth 2.0 desktop authentication flow
+- Designed polling system for real-time scanning
+- Extracted structured meeting data from unstructured email content
+- Synced Electron frontend with FastAPI backend
+
+---
+
+# Installation 
 
 Clone the repository:
 ~~~
@@ -44,54 +83,7 @@ Install Electron dependencies:
 ~~~
 npm install
 ~~~
-
-Google API Setup 🔑
-- Go to the Google Cloud Console
-- Create a new project
-- Enable Gmail API:
-     - Navigate to "APIs & Services" > "Library"
-     - Search for "Gmail API" and enable
-- Configure OAuth consent screen:
-     - Select "External" user type
-     - Add your email under "Test users"
-- Create credentials:
-     - Go to "Credentials" > "Create Credentials" > "OAuth client ID"
-     - Application type: Desktop app
-     - Name: Gmail Meeting Alarm
-- Download credentials:
-     - Click the download icon next to your new OAuth client
-     - Rename the downloaded file to credentials.json
-     - Place it in the project directory
-
-First-Time Authentication 🔓
-- Start the backend:
-~~~
-python3 src/main.py
-~~~
-- On first run, a browser window will open for Google login and permissions.
-- After authentication, a token.json file will be created in the project directory.
-
----
-
-# Usage 🖥️
-
-1. **Start the backend (FastAPI):**
-~~~
-python3 src/main.py
-~~~
-2. **Start the Electron desktop app:**
-~~~
-npm run electron
-~~~
-3. Use the UI to:
-   - Start/stop monitoring
-   - Set allowed mail IDs, scan interval, and alert time
-   - View detected meetings and logs
-   - Click "View Email" to open the original Gmail message in your browser
-   - Click "Join Meeting" to open the meeting link
-
-**Note:**
-- You must have a web browser installed for "View Email" to work. Electron will use your system's default browser.
+browser.
 - On Linux, ensure `xdg-utils` is installed (usually by default) and at least one browser (e.g., Firefox, Chromium).
 
 ---
@@ -119,18 +111,9 @@ You can modify these parameters in the UI or in `src/config.json`:
 
 ---
 
-# Security 🔒
+## Security 🔒
 - Your credentials are stored locally and never transmitted
 - The app only requests minimum required permissions (read-only for Gmail)
 - You can revoke access anytime at Google Account Security
 
 ---
-
-# Contributing 🤝
-Contributions are welcome! Please open an issue or submit a pull request.
-
----
-
-# License 📄
-This project is licensed under the MIT License - see the LICENSE file for details.
-
