@@ -1,6 +1,14 @@
-# Gmail Meeting Alarm
+# MailMinder
 
 AI-powered desktop application that monitors Gmail inboxes, detects meeting-related emails, extracts structured meeting information, and sends real-time desktop notifications.
+
+---
+
+## Demo
+
+Watch the project demo:
+
+https://youtu.be/yEPV_UyySls
 
 ---
 
