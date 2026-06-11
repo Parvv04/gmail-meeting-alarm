@@ -51,7 +51,7 @@ async function startSystem() {
     saveSettings();
     // Tell backend to start monitoring
     try {
-       await fetch('http://127.0.0.1:8000/api/start', { method: 'POST' });
+       await fetch('http://localhost:5000/api/start', { method: 'POST' });
         addLog('info', 'Backend monitoring started');
     } catch (e) {
         addLog('error', 'Failed to start backend monitoring: ' + e.message);
@@ -75,7 +75,7 @@ async function stopSystem() {
     saveSettings();
     // Tell backend to stop monitoring
     try {
-        await fetch('http://127.0.0.1:8000/api/stop', { method: 'POST' });
+        await fetch('http://localhost:5000/api/stop', { method: 'POST' });
         addLog('info', 'Backend monitoring stopped');
     } catch (e) {
         addLog('error', 'Failed to stop backend monitoring: ' + e.message);
@@ -130,16 +130,60 @@ function joinMeeting() {
 function openGmailMessage(messageId) {
     if (!messageId) return;
     const url = `https://mail.google.com/mail/u/0/#inbox/${messageId}`;
-    addLog('debug', 'Attempting to open Gmail message: ' + url);
-    if (window.electronAPI && typeof window.electronAPI.openExternal === 'function') {
-        window.electronAPI.openExternal(url).then(() => {
-            addLog('info', 'Gmail message opened via Electron shell.');
-        }).catch((err) => {
-            addLog('error', 'Electron shell.openExternal failed: ' + err);
+    window.open(url, '_blank');
+    addLog('info', 'Opened Gmail message in new tab.');
+}
+
+function renderMeetingCard(meeting) {
+    let timeStr = 'Not specified';
+    let isUpcoming = false;
+    if (meeting.time instanceof Date && !isNaN(meeting.time)) {
+        timeStr = meeting.time.toLocaleString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
         });
-    } else {
-        addLog('error', 'Electron shell.openExternal is not available. Cannot open Gmail message.');
+        isUpcoming = meeting.time > new Date();
     }
+    const statusColor = isUpcoming ? '#10b981' : '#a0aec0';
+    return `
+        <div class="meeting-card" style="border-left-color: ${statusColor}">
+            <div class="meeting-title">${meeting.title}</div>
+            <div class="meeting-details">
+                <div class="meeting-detail">
+                    <span>📧</span> Sent by: <b>${meeting.sender || 'Unknown'}</b>
+                </div>
+                <div class="meeting-detail">
+                    <span>⏰</span> ${timeStr}
+                </div>
+                <div class="meeting-detail">
+                    <span>👤</span> Account: ${meeting.account || 'Unknown account'}
+                </div>
+                <div class="meeting-detail">
+                    <span>🌐</span> ${meeting.platform || 'Unknown'}
+                </div>
+                <div class="meeting-detail">
+                    <span style="color: ${statusColor}">●</span> 
+                    ${isUpcoming ? 'Upcoming' : 'Past'}
+                </div>
+            </div>
+            <div style="margin-top: 10px; display: flex; gap: 10px;">
+                ${meeting.link ? `
+                    <button class="btn" onclick="window.open('${meeting.link}', '_blank')" style="font-size: 14px; padding: 8px 15px;">
+                        Join Meeting
+                    </button>
+                ` : ''}
+                ${meeting.id ? `
+                    <button class="btn btn-success" onclick="openGmailMessage('${meeting.id}')" style="font-size: 14px; padding: 8px 15px;">
+                        View Email
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `;
 }
 
 function updateMeetingsDisplay() {
@@ -235,7 +279,7 @@ document.getElementById('accountFilter').addEventListener('change', () => {
 
 async function updateStats() {
     try {
-        const response = await fetch('http://127.0.0.1:8000/api/stats');
+        const response = await fetch('http://localhost:5000/api/stats');
         if (response.ok) {
             const backendStats = await response.json();
             stats = backendStats;
@@ -284,7 +328,7 @@ function loadSettings() {
     const defaultSettings = {
         checkInterval: '5',
         alertTime: '10',
-        emailKeywords: 'meeting, zoom, conference, appointment, masterclass, workshop',
+        emailKeywords: 'meeting, zoom, conference, appointment, masterclass, workshop, meet, gmeet, google meet',
         allowedMailIds: '',
         isSystemRunning: false
     };
@@ -329,7 +373,7 @@ function showMeetingNotification(title, body) {
 async function checkEmails() {
     addLog('info', 'Scanning Gmail for new emails...');
     try {
-        const response = await fetch('http://127.0.0.1:8000/api/check-emails');
+        const response = await fetch('http://localhost:5000/api/check-emails');
         if (!response.ok) {
             throw new Error(`API error: ${response.status}`);
         }
@@ -408,38 +452,60 @@ function renderMeetings() {
 async function addAccount() {
     const input = document.getElementById('addAccountEmail');
     const email = input.value.trim().toLowerCase();
-    if (!email || !/^[^@\s]+@gmail\.com$/.test(email)) {
-        addLog('error', 'Please enter a valid Gmail address.');
+    if (!email || !/^[^@\s]+@[^\s]+\.[^\s]+$/.test(email)) {
+        addLog('error', 'Please enter a valid email address.');
         return;
     }
     if (accounts.includes(email)) {
         addLog('warning', 'Account already added.');
         return;
     }
-    // Trigger backend auth flow for this account
+    addLog('info', `Starting authentication for ${email}...`);
     try {
-        const resp = await fetch('http://127.0.0.1:8000/api/add-account', {
+        const resp = await fetch('http://localhost:5000/api/add-account', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
         });
-        if (resp.ok) {
-            // Wait for backend to finish authentication and monitoring
-            const result = await resp.json();
-            if (result.success) {
-                accounts.push(email);
-                input.value = '';
-                addLog('success', `Account added and authenticated: ${email}`);
-                renderAccounts();
-                populateAccountFilter(accounts);
-                // Optionally, refresh meetings for new account
-                checkEmails();
-            } else {
-                addLog('error', 'Failed to authenticate account: ' + (result.error || 'Unknown error'));
-            }
-        } else {
-            const err = await resp.text();
-            addLog('error', 'Failed to add account: ' + err);
+        const result = await resp.json();
+        if (!result.success) {
+            addLog('error', 'Failed to start auth: ' + (result.error || 'Unknown error'));
+            return;
+        }
+        if (result.already_done) {
+            if (!accounts.includes(email)) accounts.push(email);
+            input.value = '';
+            renderAccounts();
+            populateAccountFilter(accounts);
+            addLog('success', `Account already authenticated: ${email}`);
+            return;
+        }
+        if (result.auth_url) {
+            addLog('info', 'Opening Google sign-in window...');
+            const popup = window.open(result.auth_url, 'gmailAuth',
+                'width=520,height=620,left=200,top=100,resizable=yes,scrollbars=yes');
+            // Listen for success message from the popup
+            const handler = (event) => {
+                if (event.data && event.data.type === 'oauth_success') {
+                    window.removeEventListener('message', handler);
+                    const authedEmail = event.data.email || email;
+                    if (!accounts.includes(authedEmail)) accounts.push(authedEmail);
+                    input.value = '';
+                    renderAccounts();
+                    populateAccountFilter(accounts);
+                    addLog('success', `Account connected: ${authedEmail}`);
+                    checkEmails();
+                }
+            };
+            window.addEventListener('message', handler);
+            // Fallback poll in case postMessage doesn't fire
+            const poll = setInterval(async () => {
+                if (popup && popup.closed) {
+                    clearInterval(poll);
+                    window.removeEventListener('message', handler);
+                    await fetchAccounts();
+                }
+            }, 1000);
         }
     } catch (e) {
         addLog('error', 'Failed to add account: ' + e.message);
@@ -448,7 +514,7 @@ async function addAccount() {
 
 async function removeAccount(email) {
     try {
-        const resp = await fetch('http://127.0.0.1:8000/api/remove-account', {
+        const resp = await fetch('http://localhost:5000/api/remove-account', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
@@ -475,7 +541,7 @@ async function removeAccount(email) {
 }
 
 function fetchAccounts() {
-    fetch('http://127.0.0.1:8000/api/accounts')
+    fetch('http://localhost:5000/api/accounts')
         .then(res => res.json())
         .then(data => {
             accounts = data.accounts || [];

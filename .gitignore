@@ -1,6 +1,7 @@
 # === Sensitive files ===
 credentials.json
 token.json
+token-*.json
 src/config.json
 
 # === Python bytecode and cache ===
