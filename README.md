@@ -8,7 +8,8 @@ AI-powered desktop application that monitors Gmail inboxes, detects meeting-rela
 
 Watch the project demo:
 
-https://youtu.be/yEPV_UyySls
+[<img width="1855" alt="Demo" src="https://github.com/user-attachments/assets/d8ae83bc-3616-4587-ba38-d952254bfa7e">](https://youtu.be/yEPV_UyySls)
+
 
 ---
 
