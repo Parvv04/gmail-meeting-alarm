@@ -6,6 +6,7 @@ let isSystemRunning = false;
 let checkIntervalId = null;
 let uiPollIntervalId = null;
 let detectedMeetings = [];
+let alertedMeetings = new Set(); // Track which meetings we've already alerted for
 let allowedMailIds = [];
 let accounts = [];
 let stats = {
@@ -98,6 +99,11 @@ function showMeetingAlert(meeting) {
             📅 Date: ${dateStr}<br>
             🌐 Platform: ${meeting.platform}
         </div>
+        <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
+            <button class="btn btn-success" onclick="hideNotification()" style="padding: 8px 20px;">
+                OK
+            </button>
+        </div>
     `;
     if (meeting.link) {
         joinBtn.style.display = 'inline-flex';
@@ -106,7 +112,6 @@ function showMeetingAlert(meeting) {
         joinBtn.style.display = 'none';
     }
     notification.classList.add('show');
-    setTimeout(() => { hideNotification(); }, 10000);
     try {
         const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmMcAjaJ0fDVfC0EI3O/7+KTQQ0PVq7n4a5ZFgxEls7wm3cLQQ0PVq7n4a5ZFgxEls7wm3c=');
         audio.play().catch(() => {});
@@ -396,13 +401,25 @@ async function checkEmails() {
                     stats.totalMeetings++;
                     newMeetings++;
                     addLog('success', `Meeting detected: ${meeting.title}`);
-                    const alertTime = parseInt(document.getElementById('alertTime').value) * 60000;
+                }
+            });
+            
+            // Check ALL detected meetings for alerts on every scan
+            const alertTime = parseInt(document.getElementById('alertTime').value) * 60000;
+            detectedMeetings.forEach(meeting => {
+                if (meeting.time) {
                     const timeUntilMeeting = meeting.time.getTime() - Date.now();
-                    if (timeUntilMeeting > 0 && timeUntilMeeting <= alertTime) {
+                    const meetingId = meeting.id || `${meeting.title}-${meeting.time.getTime()}`;
+                    
+                    // Show alert if: time until meeting is positive (hasn't passed), within alert window, and we haven't already alerted
+                    if (timeUntilMeeting > 0 && timeUntilMeeting <= alertTime && !alertedMeetings.has(meetingId)) {
                         showMeetingAlert(meeting);
+                        alertedMeetings.add(meetingId);
+                        addLog('info', `Alert shown for: ${meeting.title}`);
                     }
                 }
             });
+            
             if (newMeetings === 0) {
                 addLog('debug', 'No new meetings found in recent emails');
             }

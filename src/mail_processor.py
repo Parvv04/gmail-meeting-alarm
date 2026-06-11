@@ -135,6 +135,8 @@ def extract_meeting_details(email_body):
         (rf'({DATE_RE})\s+(?:at\s+)?({TIME_RE})', lambda g: f"{g[0]} {g[1]}"),
         # Pattern 2: "Date: ... Time: ..." (multiline)
         (r'Date:\s*([^\n]+)\n.*?Time:\s*([^\n]+)', lambda g: f"{g[0]} {g[1]}"),
+        # Pattern 2b: "Time: ... Date: ..." (multiline - reversed order)
+        (r'Time:\s*([^\n]+)\n.*?Date:\s*([^\n]+)', lambda g: f"{g[1]} {g[0]}"),
         # Pattern 3: weekday + ordinal month date + time
         (r'(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s*(\d{1,2})(?:st|nd|rd|th)?\s+(Jan|Feb|Mar|Apr|May|Jun|July|August|September|October|November|December)[a-z]*\s*(\d{4})?\s*(?:at|from)?\s*(' + TIME_RE + r')',
          lambda g: f"{g[1]} {g[0]}, {g[2] or datetime.now().year} {g[3]}"),
