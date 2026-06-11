@@ -172,11 +172,9 @@ Configuration can be changed directly through the application UI.
 ## Future Improvements
 
 * Google Calendar integration
-* Push notifications instead of polling
 * Meeting analytics dashboard
 * Cross-platform installer packages
 * AI-powered meeting categorization
 * Cloud synchronization
 
-```
 ```
