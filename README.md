@@ -1,119 +1,182 @@
 # Gmail Meeting Alarm
 
-AI-powered desktop application that scans Gmail inbox in real-time, extracts meeting details using NLP + regex parsing, and triggers native desktop alerts so you never miss a meeting.
+AI-powered desktop application that monitors Gmail inboxes, detects meeting-related emails, extracts structured meeting information, and sends real-time desktop notifications.
 
 ---
 
-## Why I Built This
+## Features
 
-I wanted a system that automatically detects meeting details from emails instead of manually checking Gmail.
-This project helped me learn:
-
-- Gmail API integration
-
-- OAuth 2.0 authentication flow
-
-- Backend–Frontend communication (FastAPI + Electron)
-
-- NLP + regex-based data extraction
-
-- Desktop notification systems
+* Gmail API integration
+* OAuth 2.0 authentication
+* Multi-account support
+* Meeting detection using NLP and regex
+* Meeting link extraction
+* Sender whitelisting
+* Configurable scan intervals
+* Native desktop notifications
+* Electron-based desktop interface
 
 ---
 
-## Architecture
+## Tech Stack
+
+### Frontend
+
+* Electron
+* HTML
+* CSS
+* JavaScript
+
+### Backend
+
+* Python
+* FastAPI
+* Gmail API
+* OAuth 2.0
+
+### Processing
+
+* NLP-based meeting detection
+* Regex-based date/time extraction
+* Meeting link extraction
+* Sender filtering
+
+---
+
+## System Architecture
 
 ```mermaid
 flowchart TD
-        A[Electron - Frontend UI] --> B[FastAPI - Backend Server];
-        B --> C[Gmail API - OAuth 2.0 secured];
-        C --> D[Email Parsing Engine - Regex + NLP];
-        D --> E[Notification Trigger System];
+    A[Electron Desktop UI]
+    B[FastAPI Backend]
+    C[Gmail API]
+    D[Meeting Detection Engine]
+    E[Desktop Notification System]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
 ```
 
-## Tech Stack
-- Frontend
-  - Electron
-  - HTML/CSS
-  - JavaScript
-- Backend
-  - Python
-  - FastAPI
-  - Gmail API
-  - OAuth 2.0
-- Processing
-  - Regex based time/date extraction
-  - Meeting link detection
-  - Sender filtering logic
- 
-
-# Features 
-
-- OAuth-secured Gmail integration
-- Intelligent meeting detection
-- Sender whitelisting
-- Configurable scan intervals
-- Native OS notifications
-- One-click email + meeting link access
-
 ---
 
-## Key Technical Challenges Solved
-- Implemented OAuth 2.0 desktop authentication flow
-- Designed polling system for real-time scanning
-- Extracted structured meeting data from unstructured email content
-- Synced Electron frontend with FastAPI backend
+## Installation
 
----
+### 1. Clone Repository
 
-# Installation 
-
-Clone the repository:
-~~~
+```bash
 git clone https://github.com/Parvv04/gmail-meeting-alarm.git
 cd gmail-meeting-alarm
-~~~
+```
 
-Install required Python packages:
-~~~
+### 2. Install Python Dependencies
+
+```bash
 pip install -r requirements.txt
-~~~
+```
 
-Install Electron dependencies:
-~~~
+### 3. Install Electron Dependencies
+
+```bash
 npm install
-~~~
-browser.
-- On Linux, ensure `xdg-utils` is installed (usually by default) and at least one browser (e.g., Firefox, Chromium).
+```
 
 ---
 
-# Configuration ⚙️
+## Google OAuth Setup
 
-You can modify these parameters in the UI or in `src/config.json`:
-- Allowed sender email addresses
-- Scan interval (minutes)
-- Alert before meeting (minutes)
-- Meeting keywords
+### Create OAuth Credentials
+
+1. Open Google Cloud Console.
+2. Create a project.
+3. Enable Gmail API.
+4. Configure OAuth Consent Screen.
+5. Create OAuth Client ID.
+6. Choose **Web Application**.
+
+### Add Redirect URI
+
+```text
+http://localhost:5000/api/oauth/callback
+```
+
+### Download Credentials
+
+Download the OAuth credentials JSON file and rename it:
+
+```text
+credentials.json
+```
+
+Place it in the project root directory.
 
 ---
 
-# Troubleshooting
+## Running the Application
 
-- **No notifications?**
-  - Check your system's notification settings.
-  - Ensure emails contain the keywords set in the UI.
-- **Links not opening?**
-  - Make sure you have a browser installed and set as default.
-  - On Linux, install `xdg-utils` and a browser (e.g., `sudo apt install firefox`).
-- **Backend not reachable?**
-  - Make sure `python3 src/main.py` is running and accessible at `http://127.0.0.1:8000`.
+### Start Backend
+
+```bash
+python src/main.py
+```
+
+Backend should start at:
+
+```text
+http://localhost:5000
+```
+
+### Start Electron App
+
+Open a second terminal:
+
+```bash
+npm start
+```
 
 ---
 
-## Security 🔒
-- Your credentials are stored locally and never transmitted
-- The app only requests minimum required permissions (read-only for Gmail)
-- You can revoke access anytime at Google Account Security
+## First-Time Authentication
+
+1. Click "Add Account"
+2. Enter Gmail address
+3. Sign in with Google
+4. Grant Gmail read-only permission
+5. Authentication token will be stored locally
 
 ---
+
+## Configuration
+
+Available settings:
+
+* Allowed sender email addresses
+* Scan interval
+* Alert time before meeting
+* Meeting keywords
+
+Configuration can be changed directly through the application UI.
+
+---
+
+## Security
+
+* Uses Gmail read-only scope
+* Credentials remain on the local device
+* No email content is transmitted externally
+* Access can be revoked through Google Account Security settings
+
+---
+
+## Future Improvements
+
+* Google Calendar integration
+* Push notifications instead of polling
+* Meeting analytics dashboard
+* Cross-platform installer packages
+* AI-powered meeting categorization
+* Cloud synchronization
+
+```
+```
