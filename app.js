@@ -383,16 +383,41 @@ async function checkEmails() {
             throw new Error(`API error: ${response.status}`);
         }
         const data = await response.json();
+        console.log("API DATA:", data);
         // data should be an array of meeting objects
         if (Array.isArray(data) && data.length > 0) {
             let newMeetings = 0;
             data.forEach(meeting => {
+                console.log("PROCESSING:", meeting);
                 // Convert meeting.time to Date object if it's a string
                 if (typeof meeting.time === 'string') {
                     meeting.time = new Date(meeting.time);
                 }
+                if (!meeting.time) {
+                    console.error("NULL TIME FOUND", meeting);
+                    return;
+                }
+                console.log(
+                    "TITLE:", meeting.title,
+                    "TIME:", meeting.time,
+                    "TYPE:", typeof meeting.time
+                );
                 // Avoid duplicates by checking id or time/title
-                const exists = detectedMeetings.some(m => m.id === meeting.id || (m.title === meeting.title && m.time.getTime() === meeting.time.getTime()));
+                const exists = detectedMeetings.some(m => {
+                    if (m.id === meeting.id) return true;
+
+                    if (
+                        m.title === meeting.title &&
+                        m.time instanceof Date &&
+                        !isNaN(m.time) &&
+                        meeting.time instanceof Date &&
+                        !isNaN(meeting.time)
+                    ) {
+                        return m.time.getTime() === meeting.time.getTime();
+                    }
+
+                return false;
+            });
                 // Filter by allowedMailIds if set
                 const senderEmail = (meeting.sender || '').toLowerCase();
                 const allowed = allowedMailIds.length === 0 || allowedMailIds.some(id => senderEmail.includes(id));
@@ -407,8 +432,11 @@ async function checkEmails() {
             // Check ALL detected meetings for alerts on every scan
             const alertTime = parseInt(document.getElementById('alertTime').value) * 60000;
             detectedMeetings.forEach(meeting => {
-                if (meeting.time) {
-                    const timeUntilMeeting = meeting.time.getTime() - Date.now();
+                if ( meeting.time instanceof Date &&
+                    !isNaN(meeting.time)
+                ) {
+                    const timeUntilMeeting =
+                        meeting.time.getTime() - Date.now();
                     const meetingId = meeting.id || `${meeting.title}-${meeting.time.getTime()}`;
                     
                     // Show alert if: time until meeting is positive (hasn't passed), within alert window, and we haven't already alerted
